@@ -16,7 +16,7 @@ public class MonsterWarrior : MonsterBase
             Player player = base.target.GetComponent<Player>();
             yield return new WaitForSeconds(2f);
             player.HP--;
-            print("상속공격!");
+            print("전사 공격");
         }
         isAttack = false;
     }

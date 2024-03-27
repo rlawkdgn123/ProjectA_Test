@@ -1,58 +1,162 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+
+[Serializable]  // 인스펙터에 보이는 구조체로 정의
+public struct Stats
+{
+    public float maxHP; // 최대 체력
+    public float curHP; // 현재 체력
+
+    public float attackDamage;      // 공격력
+    public float attackCoolTime;    // 공격 딜레이
+    public float attackRange;       // 공격 거리
+
+    public float detectRadius;      // 감지 범위 (반지름)
+}
 public class EnemyBase : MonoBehaviour
 {
-    public enum DefaultType { defender = 1, warrior, gunner }
-    #region 세부 수치값(Stats)
-    [Header("Stats")]
-    public int maxHp;
-    public int currentHp;
-
-    [SerializeField]public float damage;
-    [SerializeField]public float attackRange;
-    [SerializeField]public float attackCoolTime;
-
-    [SerializeField]public float moveSpeed;
+    #region 수치값
+    public Stats stats;             // Stats 구조체변수
+    protected float targetDistance; // 타겟(플레이어)와의 거리
+    protected float moveSpeedBackUp;// 이동속도 백업 변수
     #endregion
 
-    #region 감지 관련값(Detect)
-    [Header("Detect")]
-    [SerializeField] float detect_Range;        //감지 범위(반지름)
-    [SerializeField] Vector3 size;              //피직스 오버랩스피어의 사이즈
-    [SerializeField] Vector3 offset;            //피직스 오버랩스피어의 위치
-    [SerializeField] Collider[] cols;           //피직스 오버랩스피어로 감지한 Collider 저장소
-    [SerializeField] LayerMask target_layer;    //특정 레이어를 지닌 오브젝트를 감지하기 위한 레이어 마스크
-    #endregion
-
-    #region 상태 표시값(State)
-    [Header("State")]
-    bool isChase;
-    bool isAttack;
-    bool isDead;
-    #endregion
-
-    #region 기타 변수(Other)
-    [Header("Other")]
-    GameObject player;
-    LayerMask enemyDetectedMask;
-    protected NavMeshAgent agent;
-    protected Animation anim;
-    protected float distanse;
-    #endregion
-
-    private void Awake() {
-        
+    #region 상태값
+    protected bool isIdle
+    {
+        get 
+        {
+            return isAttack == false && isChase == false;
+        }
     }
+    public bool isAttack;
+    protected bool isWalk;
+    protected bool isRun;
+    protected bool isChase;
+    protected bool isDeath;
+    protected bool isHit;
 
+    protected bool isDetected;
+    protected bool isEnteredAttackRange;
+    protected bool isBattleCry;
+    #endregion
+
+    #region 기타
+    [SerializeField]protected Collider[] colls; // 감지할 콜라이더들
+    [SerializeField]protected Transform target; // 타겟(플레이어) 트랜스폼
+    public Transform enemy;       // 가독성을 위한 변수 선언
+    protected NavMeshAgent nav;     // 네비게이션
+    protected Rigidbody rb;         // 리지드바디
+    protected Animator anim;        // 애니메이터
+    [SerializeField] private LayerMask targetLayer;
+    #endregion
+
+    protected virtual void Awake()
+    {
+        nav = GetComponent<NavMeshAgent>();
+        rb = GetComponent<Rigidbody>();
+        anim = GetComponent<Animator>();
+        targetLayer = LayerMask.GetMask("Player");
+        moveSpeedBackUp = nav.speed;
+    }
     void Update() {
-        Chase();
+        DetectTarget();
+        Death();
     }
-    void DetectEnemy() {
-        cols = Physics.OverlapSphere(transform.position, detect_Range);
+    public void DetectTarget() {
+        colls = Physics.OverlapSphere(enemy.position, stats.detectRadius, targetLayer);   // Player 레이어 콜라이더 감지
+        foreach (Collider coll in colls)
+        {
+            if (coll.CompareTag("Player"))
+            {
+                isDetected = true;
+                target = coll.transform;
+                if (!isBattleCry)
+                {
+                    isBattleCry = true;
+                }
+                isChase = true;
+                Chase();
+            }
+            else
+            {
+                /*
+                if (coll.CompareTag("Monster"))
+                {
+                    MonsterBase mon = coll.GetComponent<MonsterBase>();
+                }
+                */
+                isBattleCry = false;
+            }
+        }
     }
     void Chase() {
-        agent.SetDestination(player.transform.position);
+        if (isChase)
+        {
+            FreezeVelocity();
+            targetDistance = Vector3.Distance(enemy.position, target.position);
+            enemy.LookAt(new Vector3(target.position.x, this.transform.position.y, target.position.z));
+            nav.SetDestination(target.position);
+            if (targetDistance < stats.attackRange)
+            {
+                if (!isAttack)
+                {
+                    isAttack = true;
+                    StartCoroutine("Attack");
+                }
+            }
+        }
+    }
+    public virtual float AttackTimeCul(float attackTime) {
+        AnimationClip[] clips = anim.runtimeAnimatorController.animationClips;
+        foreach (AnimationClip clip in clips)
+        {
+            switch (clip.name)
+            {
+                case "Attack":
+                    attackTime = clip.length;
+                    break;
+            }
+        }
+        return attackTime;
+    }
+    public virtual IEnumerator Attack() {
+        if (isAttack)
+        {
+            Player player = target.GetComponent<Player>();
+            float attackTime = 0f;
+            nav.speed = 0;
+            AttackTimeCul(attackTime);
+            yield return new WaitForSeconds(attackTime);
+            anim.SetTrigger("Attack");
+            nav.speed = moveSpeedBackUp;
+        }
+        isAttack = false;
+    }
+    protected void Death() {
+        if (stats.curHP <= 0 && !isDeath)
+        {
+            rb.freezeRotation = false;
+            anim.SetTrigger("isDeath");
+            print("몬스터 죽음");
+            StopAllCoroutines();
+            nav.speed = 0;
+        }
+    }
+    void FreezeVelocity() { // 추적 중 물리 효과 무시
+        if(isChase)
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+    }
+    protected void OnDrawGizmos() {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(enemy.position, stats.detectRadius); // 감지 범위
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(enemy.position, stats.attackRange); // 공격 범위
     }
 }

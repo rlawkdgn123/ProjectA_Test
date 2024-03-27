@@ -4,17 +4,12 @@ using UnityEngine;
 
 public class MonsterWeapon : MonoBehaviour
 {
-    MonsterBase monster;
-    Player player;
+    public GameObject Monster;
+    public
     void Awake() {
-        monster = this.GetComponentInParent<MonsterBase>();
+        Monster = this.GetComponentInParent<GameObject>();
     }
     private void OnCollisionEnter(Collision collision) {
-        if (collision.gameObject.CompareTag("Player") && monster.isAttack)
-        {
-            player = GetComponent<Player>();
-            player.HP -= monster.stats.attackDamage;
-            print("Å¸°Ý!"+monster.stats.attackDamage);
-        }
+        
     }
 }

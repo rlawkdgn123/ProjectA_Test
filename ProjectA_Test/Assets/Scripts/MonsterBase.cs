@@ -32,7 +32,7 @@ public class MonsterBase : MonoBehaviour
             return isAttack == false && isChase == false;
         }
     }
-    protected bool isAttack;
+    public bool isAttack;
     protected bool isChase;
     protected bool isDie;
 
@@ -42,13 +42,13 @@ public class MonsterBase : MonoBehaviour
     #endregion
 
     #region 기타
-    [SerializeField] Collider[] colls;
+    [SerializeField]protected Collider[] colls;
     [SerializeField]protected Transform target;
     public Transform monster; // 가독성을 위한 변수 선언
-    NavMeshAgent nav;
-    Rigidbody rb;
-    Animation anim;
-    LayerMask targetLayer;
+    protected NavMeshAgent nav;
+    protected Rigidbody rb;
+    protected Animation anim;
+    protected LayerMask targetLayer;
     #endregion
 
     void Awake()

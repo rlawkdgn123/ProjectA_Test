@@ -11,7 +11,7 @@ public struct Stats
     public float curHP; // 현재 체력
 
     public float attackDamage;      // 공격력
-    public float attackCoolTime;    // 공격 딜레이
+    public float attackCoolTime;    // 공격 쿨타임
     public float attackRange;       // 공격 거리
 
     public float detectRadius;      // 감지 범위 (반지름)
@@ -20,25 +20,20 @@ public class EnemyBase : MonoBehaviour
 {
     #region 수치값
     public Stats stats;             // Stats 구조체변수
-    protected float targetDistance; // 타겟(플레이어)와의 거리
+    [SerializeField]protected float targetDistance; // 타겟(플레이어)와의 거리
     protected float moveSpeedBackUp;// 이동속도 백업 변수
+    public float attackTime = 0f;// 공격 딜레이
     #endregion
 
     #region 상태값
-    protected bool isIdle
-    {
-        get 
-        {
-            return isAttack == false && isChase == false;
-        }
-    }
-    public bool isAttack;
-    protected bool isWalk;
+    protected bool isIdle;
+    [SerializeField]public bool isAttack;
+    [SerializeField]protected bool isWalk;
     protected bool isRun;
-    protected bool isChase;
+    [SerializeField]protected bool isChase;
     protected bool isDeath;
     protected bool isHit;
-
+    
     protected bool isDetected;
     protected bool isEnteredAttackRange;
     protected bool isBattleCry;
@@ -50,7 +45,7 @@ public class EnemyBase : MonoBehaviour
     public Transform enemy;       // 가독성을 위한 변수 선언
     protected NavMeshAgent nav;     // 네비게이션
     protected Rigidbody rb;         // 리지드바디
-    protected Animator anim;        // 애니메이터
+    [SerializeField]protected Animator anim;        // 애니메이터
     [SerializeField] private LayerMask targetLayer;
     #endregion
 
@@ -67,6 +62,7 @@ public class EnemyBase : MonoBehaviour
         Death();
     }
     public void DetectTarget() {
+
         colls = Physics.OverlapSphere(enemy.position, stats.detectRadius, targetLayer);   // Player 레이어 콜라이더 감지
         foreach (Collider coll in colls)
         {
@@ -89,64 +85,52 @@ public class EnemyBase : MonoBehaviour
                     MonsterBase mon = coll.GetComponent<MonsterBase>();
                 }
                 */
+                isChase = false;
                 isBattleCry = false;
             }
         }
     }
-    void Chase() {
+    public virtual void Chase() {
+
         if (isChase)
         {
-            FreezeVelocity();
             targetDistance = Vector3.Distance(enemy.position, target.position);
+            FreezeVelocity();
             enemy.LookAt(new Vector3(target.position.x, this.transform.position.y, target.position.z));
-            nav.SetDestination(target.position);
+
+            if (!isAttack)
+            {
+                nav.SetDestination(target.position);
+            }
+            
             if (targetDistance < stats.attackRange)
             {
                 if (!isAttack)
                 {
-                    isAttack = true;
                     StartCoroutine("Attack");
                 }
             }
         }
     }
-    public virtual float AttackTimeCul(float attackTime) {
-        AnimationClip[] clips = anim.runtimeAnimatorController.animationClips;
-        foreach (AnimationClip clip in clips)
-        {
-            switch (clip.name)
-            {
-                case "Attack":
-                    attackTime = clip.length;
-                    break;
-            }
-        }
-        return attackTime;
-    }
     public virtual IEnumerator Attack() {
-        if (isAttack)
-        {
-            Player player = target.GetComponent<Player>();
-            float attackTime = 0f;
-            nav.speed = 0;
-            AttackTimeCul(attackTime);
-            yield return new WaitForSeconds(attackTime);
-            anim.SetTrigger("Attack");
-            nav.speed = moveSpeedBackUp;
-        }
+        isAttack = true;
+        Player player = target.GetComponent<Player>();
+        nav.isStopped = true;
+        yield return new WaitForSeconds(attackTime);
+        nav.isStopped = false;
         isAttack = false;
     }
     protected void Death() {
         if (stats.curHP <= 0 && !isDeath)
         {
             rb.freezeRotation = false;
-            anim.SetTrigger("isDeath");
+            anim.SetTrigger("DoDeath");
             print("몬스터 죽음");
             StopAllCoroutines();
-            nav.speed = 0;
+            nav.enabled = false;
         }
     }
-    void FreezeVelocity() { // 추적 중 물리 효과 무시
+    protected void FreezeVelocity() { // 추적 중 물리 효과 무시
         if(isChase)
         {
             rb.velocity = Vector3.zero;

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using TMPro;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -16,53 +17,56 @@ public class EnemyWarrior : EnemyBase
         base.DetectTarget();
         base.Death();
     }
-    public override float AttackTimeCul(float attackTime) {
-        AnimationClip[] clips = anim.runtimeAnimatorController.animationClips;
-        foreach (AnimationClip clip in clips)
+    public override void Chase() {
+
+        if (isChase)
         {
-            switch (clip.name)
+            targetDistance = Vector3.Distance(enemy.position, target.position);
+            base.FreezeVelocity();
+            enemy.LookAt(new Vector3(target.position.x, this.transform.position.y, target.position.z));
+
+            nav.SetDestination(target.position);
+
+            if (targetDistance < 2f)
             {
-                case "Attack":
-                    attackTime = clip.length;
-                    break;
+                isWalk = false;
+                nav.isStopped = true;
+            }
+            else
+            {
+                isWalk = true;
+                nav.isStopped = false;
+            }
+
+
+            if (targetDistance < stats.attackRange)
+            {
+                if (!isAttack)
+                {
+                    StartCoroutine("Attack");
+                }
             }
         }
-        return attackTime;
     }
     public override IEnumerator Attack() {
-        if (isAttack)
-        {
-            Player player = target.GetComponent<Player>();
-            float attackTime = 0f;
-            nav.speed = 0;
-            AttackTimeCul(attackTime);
-            weapon.SetActive(true);
-            yield return new WaitForSeconds(attackTime);
-            anim.SetTrigger("Attack");
-            weapon.SetActive(false);
-            nav.speed = moveSpeedBackUp;
-        }
+        isAttack = true;
+        //Player player = target.GetComponent<Player>();
+        weapon.SetActive(true);
+        anim.SetBool("IsAttack", true);
+        yield return new WaitForSeconds(attackTime); // 애니메이션 시간 + HasExitTime을 고려하여 입력해주어야한다.
+        anim.SetBool("IsAttack", false);
+        weapon.SetActive(false);
+        yield return new WaitForSeconds(stats.attackCoolTime); 
         isAttack = false;
     }
     public void Anim() {
-        if(isDetected)
+        if (isWalk && isChase && !isDeath && !nav.isStopped)
         {
-            if (isWalk && !isRun)   // 걷기 애니메이션
-            {
-                anim.SetBool("isWalk", true);
-                anim.SetBool("isRun", false);
-            }
-            else                    // 뛰기 애니메이션
-            {
-                anim.SetBool("isWalk", false);
-                anim.SetBool("isRun", true);
-            }
-        }
-
-        if (!isDetected)            // 기본 모션(Idle) 애니메이션
+            anim.SetBool("IsWalk", true);
+        }else
         {
-            anim.SetBool("isWalk", false);
-            anim.SetBool("isRun", false);
+            anim.SetBool("IsWalk", false);
         }
+            
     }
 }

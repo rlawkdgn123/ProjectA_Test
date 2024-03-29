@@ -2420,7 +2420,6 @@ GameObject:
   m_Component:
   - component: {fileID: 7534766435348634406}
   - component: {fileID: 7053435251611165033}
-  - component: {fileID: 5603103794908661624}
   - component: {fileID: 8076914964448959263}
   - component: {fileID: 3842639799452666396}
   - component: {fileID: 1246410344870141455}
@@ -2479,29 +2478,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 80
   m_CollisionDetection: 0
---- !u!136 &5603103794908661624
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7195360817515954588}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.3
-  m_Height: 1.8
-  m_Direction: 1
-  m_Center: {x: 0, y: 0.9, z: 0}
 --- !u!136 &8076914964448959263
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -2587,10 +2563,13 @@ MonoBehaviour:
     attackCoolTime: 0
     attackRange: 1.5
     detectRadius: 10
+  attackTime: 0
   isAttack: 0
+  isChase: 0
   colls: []
   target: {fileID: 0}
-  monster: {fileID: 0}
+  enemy: {fileID: 0}
+  anim: {fileID: 0}
   targetLayer:
     serializedVersion: 2
     m_Bits: 0

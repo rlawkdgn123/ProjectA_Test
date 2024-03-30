@@ -2,17 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MonsterWeapon : MonoBehaviour
+public class EnemyWeapon : MonoBehaviour
 {
-    EnemyBase enemy;
-    Player player;
-    void Awake() {
-        enemy = this.GetComponentInParent<EnemyBase>();
-    }
+    public EnemyBase enemy;
+    [SerializeField]Player player;
     private void OnTriggerEnter(Collider other) {
-        if (other.gameObject.CompareTag("Player") && enemy.isAttack)
+        if (other.gameObject.CompareTag("Player") && other.TryGetComponent(out Player player) && enemy.isAttack)
         {
-            player = GetComponent<Player>();
+            print("플체력" + player.HP);
+            print("에뎀지" + enemy.stats.attackDamage);
             player.HP -= enemy.stats.attackDamage;
         }
     }
